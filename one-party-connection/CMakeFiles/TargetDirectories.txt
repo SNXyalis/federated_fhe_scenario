@@ -1,0 +1,3 @@
+/home/stelios/Desktop/openfhe-project/one-party-connection/CMakeFiles/edit_cache.dir
+/home/stelios/Desktop/openfhe-project/one-party-connection/CMakeFiles/rebuild_cache.dir
+/home/stelios/Desktop/openfhe-project/one-party-connection/CMakeFiles/one-party-connection.dir

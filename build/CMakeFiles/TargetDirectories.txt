@@ -1,0 +1,3 @@
+/home/stelios/Desktop/openfhe-project/build/CMakeFiles/rebuild_cache.dir
+/home/stelios/Desktop/openfhe-project/build/CMakeFiles/edit_cache.dir
+/home/stelios/Desktop/openfhe-project/build/CMakeFiles/n_client.dir
