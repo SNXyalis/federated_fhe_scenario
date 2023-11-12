@@ -77,9 +77,34 @@ class FHEServer {
             return evalMultKey;
         }
 
+        PublicKey<DCRTPoly> receive_public_key(void) {
+            PublicKey<DCRTPoly> pk;
+            if (Serial::DeserializeFromFile(DATAFOLDER + "/key-public.txt", pk, SerType::BINARY) == false) {
+                std::cerr << "Could not read public key" << std::endl;
+            }
+            return pk;
+        }
+
         EvalKey<DCRTPoly> receive_key_switch(EvalKey<DCRTPoly> key_switch) {
             EvalKey<DCRTPoly> evalMultKey = key_switch;
             return evalMultKey;
+        }
+
+        void send_evalSumKey(void) {
+            std::ofstream emkeyfile(DATAFOLDER + "/" + "key-eval-mult.txt", std::ios::out | std::ios::binary);
+            if (emkeyfile.is_open()) {
+                if (m_serverCC->SerializeEvalMultKey(emkeyfile, SerType::BINARY) == false) {
+                    std::cerr << "Error writing serialization of the eval mult keys to "
+                                "key-eval-sum.txt"
+                            << std::endl;
+                }
+                std::cout << "The eval sum keys have been serialized." << std::endl;
+
+                emkeyfile.close();
+            }
+            else {
+                std::cerr << "Error serializing eval sum keys" << std::endl;
+            }
         }
 
         Ciphertext<DCRTPoly> receive_ct1(void) {
@@ -196,7 +221,8 @@ void RunCKKS() {
     // Perform Key Generation Operation
     ////////////////////////////////////////////////////////////
 
-    // Round 1 (party A)
+    // Server //
+
     //Generate Server Keypair, sumkey, keyswitch
     kp1 = cc->KeyGen();
     auto evalMultKey = cc->KeySwitchGen(kp1.secretKey, kp1.secretKey);
@@ -204,27 +230,33 @@ void RunCKKS() {
     auto evalSumKeys =
         std::make_shared<std::map<usint, EvalKey<DCRTPoly>>>(cc->GetEvalSumKeyMap(kp1.secretKey->GetKeyTag()));
 
-    // Round 2 (party B)
+    s.send_server_public_key(kp1.publicKey); // Server sends public key
+    EvalKey<DCRTPoly> server_keyswitch = s.send_key_switch(evalMultKey);
+    //TODO possibly will need updated context as well
 
-    std::cout << "Round 2 (party B) started." << std::endl;
-
-    std::cout << "Joint public key for (s_a + s_b) is generated..." << std::endl;
-    kp2 = cc->MultipartyKeyGen(kp1.publicKey);
-
-    auto evalMultKey2 = cc->MultiKeySwitchGen(kp2.secretKey, kp2.secretKey, evalMultKey);
-
-    std::cout << "Joint evaluation multiplication key for (s_a + s_b) is generated..." << std::endl;
-    auto evalMultAB = cc->MultiAddEvalKeys(evalMultKey, evalMultKey2, kp2.publicKey->GetKeyTag());
+    // Client //
+    c.generate_client_key_pair(c.receive_cc(), c.receive_server_publickey());
+    PublicKey<DCRTPoly> server_pk = s.receive_public_key(); // Server will be able to access this
+    
+    // TODO make it so that secret key is not exposed here
+    PrivateKey<DCRTPoly> client_sk;
+    if (Serial::DeserializeFromFile(DATAFOLDER + "/client1-key-private.txt", client_sk, SerType::BINARY) == false) {
+        std::cerr << "Could not read secret key" << std::endl;
+    }
+    //
+    
+    EvalKey<DCRTPoly> joined_key_switch = c.send_joined_key_switch(c.receive_cc(), c.receive_key_switch(server_keyswitch), server_pk);
+    server_keyswitch = s.receive_key_switch(joined_key_switch);// Server will be able to access this
 
     std::cout << "Joint evaluation multiplication key (s_a + s_b) is transformed "
                  "into s_b*(s_a + s_b)..."
               << std::endl;
-    auto evalMultBAB = cc->MultiMultEvalKey(kp2.secretKey, evalMultAB, kp2.publicKey->GetKeyTag());
+    auto evalMultBAB = cc->MultiMultEvalKey(client_sk, server_keyswitch, server_pk->GetKeyTag());
 
-    auto evalSumKeysB = cc->MultiEvalSumKeyGen(kp2.secretKey, evalSumKeys, kp2.publicKey->GetKeyTag());
+    auto evalSumKeysB = cc->MultiEvalSumKeyGen(client_sk, evalSumKeys, server_pk->GetKeyTag());
 
     std::cout << "Joint evaluation summation key for (s_a + s_b) is generated..." << std::endl;
-    auto evalSumKeysJoin = cc->MultiAddEvalSumKeys(evalSumKeys, evalSumKeysB, kp2.publicKey->GetKeyTag());
+    auto evalSumKeysJoin = cc->MultiAddEvalSumKeys(evalSumKeys, evalSumKeysB, server_pk->GetKeyTag());
 
     cc->InsertEvalSumKey(evalSumKeysJoin);
 
@@ -233,12 +265,12 @@ void RunCKKS() {
     std::cout << "Round 3 (party A) started." << std::endl;
 
     std::cout << "Joint key (s_a + s_b) is transformed into s_a*(s_a + s_b)..." << std::endl;
-    auto evalMultAAB = cc->MultiMultEvalKey(kp1.secretKey, evalMultAB, kp2.publicKey->GetKeyTag());
+    auto evalMultAAB = cc->MultiMultEvalKey(kp1.secretKey, server_keyswitch, server_pk->GetKeyTag());
 
     std::cout << "Computing the final evaluation multiplication key for (s_a + "
                  "s_b)*(s_a + s_b)..."
               << std::endl;
-    auto evalMultFinal = cc->MultiAddEvalMultKeys(evalMultAAB, evalMultBAB, evalMultAB->GetKeyTag());
+    auto evalMultFinal = cc->MultiAddEvalMultKeys(evalMultAAB, evalMultBAB, server_keyswitch->GetKeyTag());
 
     cc->InsertEvalMultKey({evalMultFinal});
 
@@ -248,7 +280,7 @@ void RunCKKS() {
     // Encode source data
     ////////////////////////////////////////////////////////////
     c.data = read_data_1();
-    s.send_server_public_key(kp2.publicKey);
+    s.send_server_public_key(server_pk);
     c.send_encrypted_data(c.receive_cc(), c.receive_server_publickey());
 
 
@@ -267,8 +299,8 @@ void RunCKKS() {
     Ciphertext<DCRTPoly> ciphertext3;
 
     ciphertext1 = s.receive_ct1();
-    ciphertext2 = cc->Encrypt(kp2.publicKey, plaintext2);
-    ciphertext3 = cc->Encrypt(kp2.publicKey, plaintext3);
+    ciphertext2 = cc->Encrypt(server_pk, plaintext2);
+    ciphertext3 = cc->Encrypt(server_pk, plaintext3);
 
     ////////////////////////////////////////////////////////////
     // EvalAdd Operation on Re-Encrypted Data
@@ -302,7 +334,7 @@ void RunCKKS() {
 
     auto ciphertextPartial1 = c.receive_cc()->MultipartyDecryptLead({ciphertextAdd123}, kp1.secretKey);
 
-    auto ciphertextPartial2 = c.receive_cc()->MultipartyDecryptMain({ciphertextAdd123}, kp2.secretKey);
+    auto ciphertextPartial2 = c.receive_cc()->MultipartyDecryptMain({ciphertextAdd123}, client_sk);
 
     std::vector<Ciphertext<DCRTPoly>> partialCiphertextVec;
     partialCiphertextVec.push_back(ciphertextPartial1[0]);
@@ -325,7 +357,7 @@ void RunCKKS() {
 
     ciphertextPartial1 = cc->MultipartyDecryptLead({ciphertextMult}, kp1.secretKey);
 
-    ciphertextPartial2 = cc->MultipartyDecryptMain({ciphertextMult}, kp2.secretKey);
+    ciphertextPartial2 = cc->MultipartyDecryptMain({ciphertextMult}, client_sk);
 
     std::vector<Ciphertext<DCRTPoly>> partialCiphertextVecMult;
     partialCiphertextVecMult.push_back(ciphertextPartial1[0]);
