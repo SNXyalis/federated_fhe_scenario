@@ -132,6 +132,8 @@ void RunCKKS() {
 
     std::cout << "Joint evaluation summation key for (s_a + s_b) is generated..." << std::endl;
     auto evalSumKeysJoin = cc->MultiAddEvalSumKeys(evalSumKeys, evalSumKeysB, kp2.publicKey->GetKeyTag());
+
+    cc->InsertEvalSumKey(evalSumKeysJoin);
     auto evalSumKeysJoin2 = cc->MultiAddEvalSumKeys(evalSumKeysJoin, evalSumKeysC, kp3.publicKey->GetKeyTag());
 
     cc->InsertEvalSumKey(evalSumKeysJoin2);

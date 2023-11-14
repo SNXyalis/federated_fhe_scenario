@@ -44,7 +44,7 @@ endif()
 #add_executable( three-party-threshold three-party-threshold.cpp )
 
 #add_executable( one-party-connection one-party-connection.cpp )
-add_executable( n_client palisade.cpp )
+add_executable( n_client palisade2.cpp )
 
 
 ### ADD YOUR EXECUTABLE(s) HERE

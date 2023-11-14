@@ -58,16 +58,12 @@ class FHEServer {
                     << std::endl;
         }
 
-        CryptoContext<DCRTPoly> receive_cc(void) {
-            CryptoContext<DCRTPoly> cc;
-
-            if(!Serial::DeserializeFromFile(DATAFOLDER + "/cryptocontext.txt", cc, SerType::BINARY)) {
+        void receive_cc(void) {
+            if(!Serial::DeserializeFromFile(DATAFOLDER + "/cryptocontext.txt", m_serverCC, SerType::BINARY)) {
                 std::cerr << "Error writing serialization of the crypto context to "
                             "cryptocontext.txt"
                         << std::endl;
             }
-
-            return cc;
         }
 
         void send_ccontext(void) {
@@ -123,8 +119,6 @@ class FHEServer {
         }
 
         std::shared_ptr<std::map<usint, EvalKey<DCRTPoly>>> receive_evalSumKey(PublicKey<DCRTPoly> publickey) {
-            CryptoContext<DCRTPoly> tmp = receive_cc();
-
             std::ifstream emkeys(DATAFOLDER + "/key-eval-sum.txt", std::ios::in | std::ios::binary);
             if (!emkeys.is_open()) {
                 std::cerr << "I cannot read serialization from " << DATAFOLDER + "/key-eval-sum.txt" << std::endl;
@@ -134,30 +128,27 @@ class FHEServer {
             }
 
             std::shared_ptr<std::map<usint, EvalKey<DCRTPoly>>> evalSumKeys =
-                std::make_shared<std::map<usint, EvalKey<DCRTPoly>>>(tmp->GetEvalSumKeyMap(publickey->GetKeyTag()));
+                std::make_shared<std::map<usint, EvalKey<DCRTPoly>>>(m_serverCC->GetEvalSumKeyMap(publickey->GetKeyTag()));
             //m_serverCC.InsertEvalSumKey(evalSumKeys);
             std::cerr << "test 6" << std::endl;
 
             return evalSumKeys;
         }
 
-        // void send_evalMultKey(EvalKey<DCRTPoly> evalMultKey) {
-        //     std::ifstream emkeys(DATAFOLDER + "/key-eval-mult.txt", std::ios::in | std::ios::binary);
-        //     if (!emkeys.is_open()) {
-        //         std::cerr << "I cannot read serialization from " << DATAFOLDER + "/key-eval-mult.txt" << std::endl;
-        //     }
-        //     Serial::Serialize(evalMultKey, emkeys, SerType::BINARY);
-        // }
+        void send_evalMultKey(EvalKey<DCRTPoly> evalMultKey) {
+            if (!Serial::SerializeToFile(DATAFOLDER + "/key-eval-mult.txt", evalMultKey, SerType::BINARY)) {
+                std::cerr << "Error writing serialization of keyswitch key to key-eval-mult.txt" << std::endl;
+            }
+        }
 
-        // EvalKey<DCRTPoly> receive_evalMultKey() {
-        //     EvalKey<DCRTPoly> evalMultKey;
-        //     std::ifstream emkeys(DATAFOLDER + "/key-eval-mult.txt", std::ios::in | std::ios::binary);
-        //     if (!emkeys.is_open()) {
-        //         std::cerr << "I cannot read serialization from " << DATAFOLDER + "/key-eval-mult.txt" << std::endl;
-        //     }
-        //     Serial::Deserialize(evalMultKey, emkeys, SerType::BINARY);
-        //     return evalMultKey;
-        // }
+        void receive_evalMultKey() {
+            EvalKey<DCRTPoly> test;
+            if (!Serial::DeserializeFromFile(DATAFOLDER + "/key-eval-mult.txt", test, SerType::BINARY)) {
+                std::cerr << "Error writing serialization of keyswitch key to key-eval-mult.txt" << std::endl;
+            }
+
+            m_serverCC->InsertEvalMultKey({test});
+        }
 
         Ciphertext<DCRTPoly> receive_ct1(void) {
             Ciphertext<DCRTPoly> ct1;
@@ -187,7 +178,7 @@ class FHEClient {
         EvalKey<DCRTPoly> joinedKeySwitchKey;
         PublicKey<DCRTPoly> joinedpublicKey;
 
-        CryptoContext<DCRTPoly> receive_cc(void) {
+        void receive_cc(void) {
             CryptoContext<DCRTPoly> cc;
 
             if(!Serial::DeserializeFromFile(DATAFOLDER + "/cryptocontext.txt", cc, SerType::BINARY)) {
@@ -197,7 +188,6 @@ class FHEClient {
             }
 
             clientCC = cc;
-            return cc;
         }
 
         void send_ccontext(void) {
@@ -254,6 +244,7 @@ class FHEClient {
             auto evalSumKeys = clientCC->MultiEvalSumKeyGen(secretKey, priorkey, pk->GetKeyTag());
             cevalSumKey = evalSumKeys;
             auto evalSumKeysJoin = clientCC->MultiAddEvalSumKeys(priorkey, evalSumKeys, pk->GetKeyTag());
+            clientCC->InsertEvalSumKey(evalSumKeysJoin);
 
             std::ofstream emkeyfile(DATAFOLDER + "/" + "key-eval-sum.txt", std::ios::out | std::ios::binary);
             if (emkeyfile.is_open()) {
@@ -270,27 +261,21 @@ class FHEClient {
             return evalSumKeysJoin;
         }
 
-        // EvalKey<DCRTPoly> receive_evalMultKey() {
-        //     EvalKey<DCRTPoly> evalMultKey;
-        //     std::ifstream emkeys(DATAFOLDER + "/key-eval-mult.txt", std::ios::in | std::ios::binary);
-        //     if (!emkeys.is_open()) {
-        //         std::cerr << "I cannot read serialization from " << DATAFOLDER + "/key-eval-mult.txt" << std::endl;
-        //     }
-        //     Serial::Deserialize(evalMultKey, emkeys, SerType::BINARY);
+        EvalKey<DCRTPoly> receive_evalMultKey() {
+            EvalKey<DCRTPoly> evalMultKey;
+            if (!Serial::DeserializeFromFile(DATAFOLDER + "/key-eval-mult.txt", evalMultKey, SerType::BINARY)) {
+                std::cerr << "Error writing serialization of keyswitch key to key-eval-mult.txt" << std::endl;
+            }
+            return evalMultKey;
+        }
 
-        //     return evalMultKey;
-        // }
-
-        // void send_joined_evalMultKey(EvalKey<DCRTPoly> newkey, EvalKey<DCRTPoly> priorkey, EvalKey<DCRTPoly> keyswitch) {
-        //     EvalKey<DCRTPoly> evalMultFinal = clientCC->MultiAddEvalMultKeys(priorkey, newkey, keyswitch->GetKeyTag());
-        //     std::ifstream emkeys(DATAFOLDER + "/key-eval-mult.txt", std::ios::in | std::ios::binary);
-        //     if (!emkeys.is_open()) {
-        //         std::cerr << "I cannot read serialization from " << DATAFOLDER + "/key-eval-mult.txt" << std::endl;
-        //     }
-        //     Serial::Serialize(evalMultFinal, emkeys, SerType::BINARY);
-
-        //     return evalMultFinal;
-        // }
+        void send_joined_evalMultKey(EvalKey<DCRTPoly> priorkey, EvalKey<DCRTPoly> keyswitch, PublicKey<DCRTPoly> publicKey) {
+            EvalKey<DCRTPoly> client_key = clientCC->MultiMultEvalKey(secretKey, keyswitch, publicKey->GetKeyTag());
+            EvalKey<DCRTPoly> evalMultFinal = clientCC->MultiAddEvalMultKeys(priorkey, client_key, keyswitch->GetKeyTag());
+            if (!Serial::SerializeToFile(DATAFOLDER + "/key-eval-mult.txt", evalMultFinal, SerType::BINARY)) {
+                std::cerr << "Error writing serialization of keyswitch key to key-eval-mult.txt" << std::endl;
+            }
+        }
 
         //Keep the secret, send the pk to the server
         void generate_client_key_pair(CryptoContext<DCRTPoly> ccontext, PublicKey<DCRTPoly> publickey) {
@@ -307,7 +292,7 @@ class FHEClient {
             publicKey = kp.publicKey;
         }
 
-        void send_encrypted_data(CryptoContext<DCRTPoly> ccontext, PublicKey<DCRTPoly> publickey) {
+        void send_encrypted_data(PublicKey<DCRTPoly> publickey) {
             PublicKey<DCRTPoly> pk = publickey;
             Plaintext plaintext = clientCC->MakeCKKSPackedPlaintext(data);
             Ciphertext<DCRTPoly> ciphertext;
@@ -365,7 +350,7 @@ void RunCKKS() {
     FHEClient c;
     c.receive_cc();
 
-    std::shared_ptr<std::map<usint, EvalKey<DCRTPoly>>> server_evalSumKey = c.receive_evalSumKey(c.clientCC, c.receive_server_publickey()); // Should get sum map before new keypair
+    std::shared_ptr<std::map<usint, EvalKey<DCRTPoly>>> server_evalSumKey = c.receive_evalSumKey(c.receive_server_publickey()); // Should get sum map before new keypair
     
     //keypair
     c.generate_client_key_pair(c.clientCC, c.receive_server_publickey());
@@ -376,47 +361,43 @@ void RunCKKS() {
     c.send_joined_key_switch(c.clientCC, c.receive_key_switch(), client_pk);
 
     //sum 
-    //c.send_joined_evalSumKey(c.clientCC, server_evalSumKey, client_pk);
-    //c.send_ccontext();
+    c.send_joined_evalSumKey(c.clientCC, server_evalSumKey, client_pk);
+    c.send_ccontext();
 
     // Server //
-    
+    s.receive_cc();
+    cc = s.m_serverCC;
     PublicKey<DCRTPoly> server_pk = s.receive_public_key();
 
     //keyswitch
     EvalKey<DCRTPoly> server_keyswitch = s.receive_key_switch();// Server will be able to access this
 
-    //sum
-    //std::shared_ptr<std::map<usint, EvalKey<DCRTPoly>>> server_joinedevalSumKey = s.receive_evalSumKey(server_pk);
-    //cc->InsertEvalSumKey(server_joinedevalSumKey);
-    cc->InsertEvalSumKey(c.send_joined_evalSumKey(c.clientCC, server_evalSumKey, server_pk)); //TODO FIX, This shouldnt be like that, because its using a client arg
-
-    // MULTIPLICATION NEEDS FIXING ////////////////////////////////////////////////////////////////////////////////
-    // auto server_mult_key = cc->MultiMultEvalKey(kp1.secretKey, server_keyswitch, server_pk->GetKeyTag());
-    // s.send_evalMultKey(server_mult_key);
+    //multi
+    EvalKey<DCRTPoly> server_mult_key = cc->MultiMultEvalKey(kp1.secretKey, server_keyswitch, server_pk->GetKeyTag());
+    s.send_key_switch(server_keyswitch);
+    s.send_evalMultKey(server_mult_key);
 
     // // Client // 
-    // PublicKey<DCRTPoly> updated_server_pk = c.receive_server_publickey();
-    EvalKey<DCRTPoly> fullyjoined_keyswitch = c.receive_key_switch();
-    //     std::cout << "\n Original Plaintext: \n" << std::endl;
+    PublicKey<DCRTPoly> updated_server_pk = c.receive_server_publickey();
+    EvalKey<DCRTPoly> serv_mult_key = c.receive_evalMultKey();
+    EvalKey<DCRTPoly> joined_keyswitch = c.receive_key_switch();
 
-    // auto updated_server_mult_key = c.receive_evalMultKey();
-    //     std::cout << "\n Original Plaintext: \n" << std::endl;
+    c.send_joined_evalMultKey(c.receive_evalMultKey(), c.receive_key_switch(), c.receive_server_publickey());
+    // EvalKey<DCRTPoly> client_key = c.clientCC->MultiMultEvalKey(c.secretKey, joined_keyswitch, updated_server_pk->GetKeyTag());
+    // EvalKey<DCRTPoly> evalMultFinal = c.clientCC->MultiAddEvalMultKeys(serv_mult_key, client_key, joined_keyswitch->GetKeyTag());
+    // if (!Serial::SerializeToFile(DATAFOLDER + "/key-eval-mult.txt", evalMultFinal, SerType::BINARY)) {
+    //     std::cerr << "Error writing serialization of keyswitch key to key-eval-mult.txt" << std::endl;
+    // }
 
-    // auto client_mult_key = cc->MultiMultEvalKey(client_sk, server_keyswitch, server_pk->GetKeyTag());
-    //     std::cout << "\n Original Plaintext: \n" << std::endl;
+    // Server//
+    s.receive_evalMultKey();
+    // EvalKey<DCRTPoly> test;
+    // if (!Serial::DeserializeFromFile(DATAFOLDER + "/key-eval-mult.txt", test, SerType::BINARY)) {
+    //     std::cerr << "Error writing serialization of keyswitch key to key-eval-mult.txt" << std::endl;
+    // }
 
-    // c.send_joined_evalMultKey(client_mult_key, updated_server_mult_key, fullyjoined_keyswitch);
-    //     std::cout << "\n Original Plaintext: \n" << std::endl;
-
-    // // Server//
-    // auto fully_joined_server_Mult_key = s.receive_evalMultKey();
-    //     std::cout << "\n Original Plaintext: \n" << std::endl;
-    // cc->InsertEvalMultKey({fully_joined_server_Mult_key});
-    auto evalMultAB = cc->MultiMultEvalKey(kp1.secretKey, fullyjoined_keyswitch, server_pk->GetKeyTag());
-    auto evalMultBA = cc->MultiMultEvalKey(client_sk, fullyjoined_keyswitch, server_pk->GetKeyTag());
-    auto evalMultFinal = cc->MultiAddEvalMultKeys(evalMultAB, evalMultBA, fullyjoined_keyswitch->GetKeyTag());
-    cc->InsertEvalMultKey({evalMultFinal});
+    // cc->InsertEvalMultKey({test});
+    cc = s.m_serverCC;
 
 
     ////////////////////////////////////////////////////////////
@@ -424,7 +405,7 @@ void RunCKKS() {
     ////////////////////////////////////////////////////////////
     c.data = read_data_1();
     s.send_server_public_key(server_pk);
-    c.send_encrypted_data(c.receive_cc(), c.receive_server_publickey());
+    c.send_encrypted_data(c.receive_server_publickey());
 
 
     std::vector<double> vectorOfInts2 = {1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0};
@@ -475,15 +456,15 @@ void RunCKKS() {
 
     // distributed decryption
 
-    auto ciphertextPartial1 = c.receive_cc()->MultipartyDecryptLead({ciphertextAdd123}, kp1.secretKey);
+    auto ciphertextPartial1 = c.clientCC->MultipartyDecryptLead({ciphertextAdd123}, kp1.secretKey);
 
-    auto ciphertextPartial2 = c.receive_cc()->MultipartyDecryptMain({ciphertextAdd123}, client_sk);
+    auto ciphertextPartial2 = c.clientCC->MultipartyDecryptMain({ciphertextAdd123}, client_sk);
 
     std::vector<Ciphertext<DCRTPoly>> partialCiphertextVec;
     partialCiphertextVec.push_back(ciphertextPartial1[0]);
     partialCiphertextVec.push_back(ciphertextPartial2[0]);
 
-    c.receive_cc()->MultipartyDecryptFusion(partialCiphertextVec, &plaintextMultipartyNew);
+    c.clientCC->MultipartyDecryptFusion(partialCiphertextVec, &plaintextMultipartyNew);
 
     std::cout << "\n Original Plaintext: \n" << std::endl;
     std::cout << plaintext2 << std::endl;
