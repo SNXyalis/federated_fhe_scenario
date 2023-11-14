@@ -123,32 +123,32 @@ n_client/fast:
 	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/build
 .PHONY : n_client/fast
 
-palisade.o: palisade.cpp.o
+palisade2.o: palisade2.cpp.o
 
-.PHONY : palisade.o
+.PHONY : palisade2.o
 
 # target to build an object file
-palisade.cpp.o:
-	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade.cpp.o
-.PHONY : palisade.cpp.o
+palisade2.cpp.o:
+	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade2.cpp.o
+.PHONY : palisade2.cpp.o
 
-palisade.i: palisade.cpp.i
+palisade2.i: palisade2.cpp.i
 
-.PHONY : palisade.i
+.PHONY : palisade2.i
 
 # target to preprocess a source file
-palisade.cpp.i:
-	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade.cpp.i
-.PHONY : palisade.cpp.i
+palisade2.cpp.i:
+	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade2.cpp.i
+.PHONY : palisade2.cpp.i
 
-palisade.s: palisade.cpp.s
+palisade2.s: palisade2.cpp.s
 
-.PHONY : palisade.s
+.PHONY : palisade2.s
 
 # target to generate assembly for a file
-palisade.cpp.s:
-	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade.cpp.s
-.PHONY : palisade.cpp.s
+palisade2.cpp.s:
+	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade2.cpp.s
+.PHONY : palisade2.cpp.s
 
 # Help Target
 help:
@@ -159,9 +159,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... n_client"
-	@echo "... palisade.o"
-	@echo "... palisade.i"
-	@echo "... palisade.s"
+	@echo "... palisade2.o"
+	@echo "... palisade2.i"
+	@echo "... palisade2.s"
 .PHONY : help
 
 
