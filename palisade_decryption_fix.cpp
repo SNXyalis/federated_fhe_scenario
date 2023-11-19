@@ -215,13 +215,12 @@ class FHEClient {
             }
         }
 
-        PublicKey<DCRTPoly> receive_server_publickey(void) {
+        void receive_server_publickey(void) {
             PublicKey<DCRTPoly> pk;
             if (Serial::DeserializeFromFile(DATAFOLDER + "/key-public.txt", pk, SerType::BINARY) == false) {
                 std::cerr << "Could not read public key" << std::endl;
             }
             server_pk =pk;
-            return pk;
         }
 
         EvalKey<DCRTPoly> receive_key_switch() {
