@@ -35,7 +35,7 @@ std::vector<double> read_data_3(void) {
 class FHEServer {
     public:
         CryptoContext<DCRTPoly> m_serverCC;
-        uint numClient = 0;
+        double numClient = 0;
 
         void generate_ccontext(int multDepth, int scaleFactorBits, int batchSize) {
             CCParams<CryptoContextCKKSRNS> parameters;
@@ -156,6 +156,28 @@ class FHEServer {
                 std::cerr << "Could not read the ciphertext" << std::endl;
             }
             return ct1;
+        }
+
+        Ciphertext<DCRTPoly> receive_partial_decrypted_ct() {
+            Ciphertext<DCRTPoly> partial_result;
+            if (Serial::DeserializeFromFile(DATAFOLDER + "/partial-ct-1.txt", partial_result, SerType::BINARY) == false) {
+                std::cerr << "Could not read the partial ciphertext" << std::endl;
+            }
+            return partial_result;
+        }
+
+        void send_result_ct(Ciphertext<DCRTPoly> result) {
+            if (!Serial::SerializeToFile(DATAFOLDER + "/" + "/partial-ct-1.txt", result, SerType::BINARY)) {
+                std::cerr << "Error writing serialization of partial ct1 to partial-ct-1.txt" << std::endl;
+            }
+        }
+
+        std::vector<double> make_vector(int vectorsize) {
+            std::vector<double> server_vector;
+            for (int i = 1; i <= vectorsize; i++) {
+                server_vector.push_back(1.0/numClient);
+            }
+            return server_vector;
         }
 };
 
@@ -297,8 +319,7 @@ class FHEClient {
             Plaintext plaintext = clientCC->MakeCKKSPackedPlaintext(data);
             Ciphertext<DCRTPoly> ciphertext;
 
-                std::cout << "\n Original Plaintext1: \n" << std::endl;
-                std::cout << plaintext << std::endl;
+                std::cout << "W0: " << plaintext << std::endl;
 
             ciphertext = clientCC->Encrypt(pk, plaintext);
             if (!Serial::SerializeToFile(DATAFOLDER + "/" + "ciphertext1.txt", ciphertext, SerType::BINARY)) {
@@ -306,7 +327,20 @@ class FHEClient {
             }
         }
 
+        Ciphertext<DCRTPoly> receive_ct_for_decryption() {
+            Ciphertext<DCRTPoly> partial_result;
+            if (Serial::DeserializeFromFile(DATAFOLDER + "/partial-ct-1.txt", partial_result, SerType::BINARY) == false) {
+                std::cerr << "Could not read the partial ciphertext" << std::endl;
+            }
+            return partial_result;
+        }
 
+        void send_partial_decrypted_ct(Ciphertext<DCRTPoly> result) {
+            auto partial_dec = clientCC->MultipartyDecryptMain({result}, secretKey);
+            if (!Serial::SerializeToFile(DATAFOLDER + "/" + "/partial-ct-1.txt", partial_dec[0], SerType::BINARY)) {
+                std::cerr << "Error writing serialization of partial ct1 to partial-ct-1.txt" << std::endl;
+            }
+        }
 };
 
 int main(int argc, char* argv[]) {
@@ -321,7 +355,7 @@ int main(int argc, char* argv[]) {
 
 //Server
 void RunCKKS() {
-    uint batchSize = 16;
+    //uint batchSize = 16;
         // Initialize Public Key Containers
 
 
@@ -347,7 +381,7 @@ void RunCKKS() {
     //TODO possibly will need updated context as well
 
     // Client //
-    FHEClient c;
+    FHEClient c, c1;
     c.receive_cc();
 
     std::shared_ptr<std::map<usint, EvalKey<DCRTPoly>>> server_evalSumKey = c.receive_evalSumKey(c.receive_server_publickey()); // Should get sum map before new keypair
@@ -383,26 +417,18 @@ void RunCKKS() {
     EvalKey<DCRTPoly> joined_keyswitch = c.receive_key_switch();
 
     c.send_joined_evalMultKey(c.receive_evalMultKey(), c.receive_key_switch(), c.receive_server_publickey());
-    // EvalKey<DCRTPoly> client_key = c.clientCC->MultiMultEvalKey(c.secretKey, joined_keyswitch, updated_server_pk->GetKeyTag());
-    // EvalKey<DCRTPoly> evalMultFinal = c.clientCC->MultiAddEvalMultKeys(serv_mult_key, client_key, joined_keyswitch->GetKeyTag());
-    // if (!Serial::SerializeToFile(DATAFOLDER + "/key-eval-mult.txt", evalMultFinal, SerType::BINARY)) {
-    //     std::cerr << "Error writing serialization of keyswitch key to key-eval-mult.txt" << std::endl;
-    // }
+
 
     // Server//
     s.receive_evalMultKey();
-    // EvalKey<DCRTPoly> test;
-    // if (!Serial::DeserializeFromFile(DATAFOLDER + "/key-eval-mult.txt", test, SerType::BINARY)) {
-    //     std::cerr << "Error writing serialization of keyswitch key to key-eval-mult.txt" << std::endl;
-    // }
-
-    // cc->InsertEvalMultKey({test});
     cc = s.m_serverCC;
 
 
     ////////////////////////////////////////////////////////////
     // Encode source data
     ////////////////////////////////////////////////////////////
+
+    //Client
     c.data = read_data_1();
     s.send_server_public_key(server_pk);
     c.send_encrypted_data(c.receive_server_publickey());
@@ -430,15 +456,18 @@ void RunCKKS() {
     // EvalAdd Operation on Re-Encrypted Data
     ////////////////////////////////////////////////////////////
 
-    Ciphertext<DCRTPoly> ciphertextAdd12;
-    Ciphertext<DCRTPoly> ciphertextAdd123;
+    //Server
 
-    ciphertextAdd12  = cc->EvalAdd(ciphertext1, ciphertext2);
-    ciphertextAdd123 = cc->EvalAdd(ciphertextAdd12, ciphertext3);
+    Ciphertext<DCRTPoly> Waggr;
+    Waggr  = cc->EvalAdd(ciphertext1, ciphertext2);
+    Waggr = cc->EvalAdd(Waggr, ciphertext3);
 
-    auto ciphertextMultTemp = cc->EvalMult(ciphertext1, ciphertext3);
+    s.numClient = 3.0;
+    std::vector<double> vectorOfClients = s.make_vector(12);
+    Plaintext plaintext_clients = cc->MakeCKKSPackedPlaintext(vectorOfClients);
+
+    auto ciphertextMultTemp = cc->EvalMult(Waggr, plaintext_clients);
     auto ciphertextMult     = cc->ModReduce(ciphertextMultTemp);
-    auto ciphertextEvalSum  = cc->EvalSum(ciphertext3, batchSize);
 
     ////////////////////////////////////////////////////////////
     // Decryption after Accumulation Operation on Encrypted Data with Multiparty
@@ -455,46 +484,27 @@ void RunCKKS() {
     Plaintext plaintextMultipartyNew;
 
     // distributed decryption
+    s.send_result_ct(ciphertextMult);
+    
 
-    auto ciphertextPartial1 = c.clientCC->MultipartyDecryptLead({ciphertextAdd123}, kp1.secretKey);
+    auto ciphertextPartial1 = cc->MultipartyDecryptLead({ciphertextMult}, kp1.secretKey);
 
-    auto ciphertextPartial2 = c.clientCC->MultipartyDecryptMain({ciphertextAdd123}, client_sk);
+    c.send_partial_decrypted_ct( c.receive_ct_for_decryption());
+    //auto ciphertextPartial2 = cc->MultipartyDecryptMain({ciphertextMult}, client_sk);  
 
     std::vector<Ciphertext<DCRTPoly>> partialCiphertextVec;
     partialCiphertextVec.push_back(ciphertextPartial1[0]);
-    partialCiphertextVec.push_back(ciphertextPartial2[0]);
+    partialCiphertextVec.push_back(s.receive_partial_decrypted_ct());
 
     c.clientCC->MultipartyDecryptFusion(partialCiphertextVec, &plaintextMultipartyNew);
 
-    std::cout << "\n Original Plaintext: \n" << std::endl;
-    std::cout << plaintext2 << std::endl;
-    std::cout << plaintext3 << std::endl;
+    std::cout << "W1: " << plaintext2 << std::endl;
+    std::cout << "W2: " << plaintext3 << std::endl;
 
     plaintextMultipartyNew->SetLength(plaintext2->GetLength());
 
-    std::cout << "\n Resulting Fused Plaintext: \n" << std::endl;
+    std::cout << "\n Resulting Plaintext: \n" << std::endl;
     std::cout << plaintextMultipartyNew << std::endl;
-
-    std::cout << "\n";
-
-    Plaintext plaintextMultipartyMult;
-
-    ciphertextPartial1 = cc->MultipartyDecryptLead({ciphertextMult}, kp1.secretKey);
-
-    ciphertextPartial2 = cc->MultipartyDecryptMain({ciphertextMult}, client_sk);
-
-    std::vector<Ciphertext<DCRTPoly>> partialCiphertextVecMult;
-    partialCiphertextVecMult.push_back(ciphertextPartial1[0]);
-    partialCiphertextVecMult.push_back(ciphertextPartial2[0]);
-
-    cc->MultipartyDecryptFusion(partialCiphertextVecMult, &plaintextMultipartyMult);
-
-    plaintextMultipartyMult->SetLength(plaintext2->GetLength());
-
-    std::cout << "\n Resulting Fused Plaintext after Multiplication of plaintexts 1 "
-                 "and 3: \n"
-              << std::endl;
-    std::cout << plaintextMultipartyMult << std::endl;
 
     std::cout << "\n";
 }

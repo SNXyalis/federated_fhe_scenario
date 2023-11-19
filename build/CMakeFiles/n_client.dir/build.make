@@ -57,27 +57,27 @@ include CMakeFiles/n_client.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/n_client.dir/flags.make
 
-CMakeFiles/n_client.dir/palisade2.cpp.o: CMakeFiles/n_client.dir/flags.make
-CMakeFiles/n_client.dir/palisade2.cpp.o: ../palisade2.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/stelios/Desktop/openfhe-project/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/n_client.dir/palisade2.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/n_client.dir/palisade2.cpp.o -c /home/stelios/Desktop/openfhe-project/palisade2.cpp
+CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.o: CMakeFiles/n_client.dir/flags.make
+CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.o: ../palisade_decryption_fix.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/stelios/Desktop/openfhe-project/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.o -c /home/stelios/Desktop/openfhe-project/palisade_decryption_fix.cpp
 
-CMakeFiles/n_client.dir/palisade2.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/n_client.dir/palisade2.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/stelios/Desktop/openfhe-project/palisade2.cpp > CMakeFiles/n_client.dir/palisade2.cpp.i
+CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/stelios/Desktop/openfhe-project/palisade_decryption_fix.cpp > CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.i
 
-CMakeFiles/n_client.dir/palisade2.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/n_client.dir/palisade2.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/stelios/Desktop/openfhe-project/palisade2.cpp -o CMakeFiles/n_client.dir/palisade2.cpp.s
+CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/stelios/Desktop/openfhe-project/palisade_decryption_fix.cpp -o CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.s
 
 # Object files for target n_client
 n_client_OBJECTS = \
-"CMakeFiles/n_client.dir/palisade2.cpp.o"
+"CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.o"
 
 # External object files for target n_client
 n_client_EXTERNAL_OBJECTS =
 
-n_client: CMakeFiles/n_client.dir/palisade2.cpp.o
+n_client: CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.o
 n_client: CMakeFiles/n_client.dir/build.make
 n_client: /usr/local/lib/libOPENFHEpke.so.0.9.5
 n_client: /usr/local/lib/libOPENFHEbinfhe.so.0.9.5

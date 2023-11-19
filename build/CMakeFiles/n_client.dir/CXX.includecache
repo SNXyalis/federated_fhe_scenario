@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/stelios/Desktop/openfhe-project/palisade2.cpp
+/home/stelios/Desktop/openfhe-project/palisade_decryption_fix.cpp
 openfhe.h
 /home/stelios/Desktop/openfhe-project/openfhe.h
 cryptocontext-ser.h

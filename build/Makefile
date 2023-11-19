@@ -123,32 +123,32 @@ n_client/fast:
 	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/build
 .PHONY : n_client/fast
 
-palisade2.o: palisade2.cpp.o
+palisade_decryption_fix.o: palisade_decryption_fix.cpp.o
 
-.PHONY : palisade2.o
+.PHONY : palisade_decryption_fix.o
 
 # target to build an object file
-palisade2.cpp.o:
-	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade2.cpp.o
-.PHONY : palisade2.cpp.o
+palisade_decryption_fix.cpp.o:
+	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.o
+.PHONY : palisade_decryption_fix.cpp.o
 
-palisade2.i: palisade2.cpp.i
+palisade_decryption_fix.i: palisade_decryption_fix.cpp.i
 
-.PHONY : palisade2.i
+.PHONY : palisade_decryption_fix.i
 
 # target to preprocess a source file
-palisade2.cpp.i:
-	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade2.cpp.i
-.PHONY : palisade2.cpp.i
+palisade_decryption_fix.cpp.i:
+	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.i
+.PHONY : palisade_decryption_fix.cpp.i
 
-palisade2.s: palisade2.cpp.s
+palisade_decryption_fix.s: palisade_decryption_fix.cpp.s
 
-.PHONY : palisade2.s
+.PHONY : palisade_decryption_fix.s
 
 # target to generate assembly for a file
-palisade2.cpp.s:
-	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade2.cpp.s
-.PHONY : palisade2.cpp.s
+palisade_decryption_fix.cpp.s:
+	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.s
+.PHONY : palisade_decryption_fix.cpp.s
 
 # Help Target
 help:
@@ -159,9 +159,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... n_client"
-	@echo "... palisade2.o"
-	@echo "... palisade2.i"
-	@echo "... palisade2.s"
+	@echo "... palisade_decryption_fix.o"
+	@echo "... palisade_decryption_fix.i"
+	@echo "... palisade_decryption_fix.s"
 .PHONY : help
 
 
