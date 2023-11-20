@@ -1,5 +1,5 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.o"
+  "CMakeFiles/n_client.dir/aggregator_fix2.cpp.o"
   "n_client"
   "n_client.pdb"
 )

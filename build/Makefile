@@ -123,32 +123,32 @@ n_client/fast:
 	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/build
 .PHONY : n_client/fast
 
-palisade_decryption_fix.o: palisade_decryption_fix.cpp.o
+aggregator_fix2.o: aggregator_fix2.cpp.o
 
-.PHONY : palisade_decryption_fix.o
+.PHONY : aggregator_fix2.o
 
 # target to build an object file
-palisade_decryption_fix.cpp.o:
-	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.o
-.PHONY : palisade_decryption_fix.cpp.o
+aggregator_fix2.cpp.o:
+	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/aggregator_fix2.cpp.o
+.PHONY : aggregator_fix2.cpp.o
 
-palisade_decryption_fix.i: palisade_decryption_fix.cpp.i
+aggregator_fix2.i: aggregator_fix2.cpp.i
 
-.PHONY : palisade_decryption_fix.i
+.PHONY : aggregator_fix2.i
 
 # target to preprocess a source file
-palisade_decryption_fix.cpp.i:
-	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.i
-.PHONY : palisade_decryption_fix.cpp.i
+aggregator_fix2.cpp.i:
+	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/aggregator_fix2.cpp.i
+.PHONY : aggregator_fix2.cpp.i
 
-palisade_decryption_fix.s: palisade_decryption_fix.cpp.s
+aggregator_fix2.s: aggregator_fix2.cpp.s
 
-.PHONY : palisade_decryption_fix.s
+.PHONY : aggregator_fix2.s
 
 # target to generate assembly for a file
-palisade_decryption_fix.cpp.s:
-	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/palisade_decryption_fix.cpp.s
-.PHONY : palisade_decryption_fix.cpp.s
+aggregator_fix2.cpp.s:
+	$(MAKE) -f CMakeFiles/n_client.dir/build.make CMakeFiles/n_client.dir/aggregator_fix2.cpp.s
+.PHONY : aggregator_fix2.cpp.s
 
 # Help Target
 help:
@@ -159,9 +159,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... n_client"
-	@echo "... palisade_decryption_fix.o"
-	@echo "... palisade_decryption_fix.i"
-	@echo "... palisade_decryption_fix.s"
+	@echo "... aggregator_fix2.o"
+	@echo "... aggregator_fix2.i"
+	@echo "... aggregator_fix2.s"
 .PHONY : help
 
 

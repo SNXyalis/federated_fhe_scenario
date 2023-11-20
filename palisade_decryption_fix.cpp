@@ -396,6 +396,8 @@ void RunCKKS() {
     s.send_key_switch(evalMultKey);
     s.send_evalSumKey();
 
+    // LOOP 1 START
+
     // Client //
     FHEClient c;
     c.receive_cc();
@@ -412,6 +414,8 @@ void RunCKKS() {
     //sum 
     c.send_joined_evalSumKey(server_evalSumKey);
     c.send_ccontext();
+
+    // LOOP 1 END
 
     // Client 1 //
     FHEClient c1;
@@ -444,9 +448,13 @@ void RunCKKS() {
     s.send_key_switch(server_keyswitch);
     s.send_evalMultKey(server_mult_key);
 
+    // LOOP 2 START
+
     // Client // 
     c.receive_server_publickey();
     c.send_joined_evalMultKey(c.receive_evalMultKey(), c.receive_key_switch());
+
+    // LOOP 2 END
 
     // Client1 // 
     c1.receive_server_publickey();
@@ -467,6 +475,8 @@ void RunCKKS() {
     PublicKey<DCRTPoly> updated_server_pk = s.receive_public_key();
     s.send_server_public_key(updated_server_pk);
 
+    //LOOP 3 START
+
     //Client
     c.receive_server_publickey();
     c.send_encrypted_data();
@@ -474,6 +484,8 @@ void RunCKKS() {
     //Server
     Ciphertext<DCRTPoly> ciphertext1;
     ciphertext1 = s.receive_ct1();
+
+    // LOOP 3 END
 
     //Client 1
     c1.data = read_data_2();
