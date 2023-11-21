@@ -466,8 +466,10 @@ class FHEClient {
             }
         }
 
-        void send_lead_ct(std::vector<Ciphertext<DCRTPoly>> ct) {
-            if (!Serial::SerializeToFile(DATAFOLDER + "/" + "/lead-ct-1.txt", ct, SerType::BINARY)) {
+        void send_lead_ct() {
+            auto ciphertextPartial1 = clientCC->MultipartyDecryptLead({result}, secretKey);
+            partial_vector.push_back(ciphertextPartial1[0]);
+            if (!Serial::SerializeToFile(DATAFOLDER + "/" + "/lead-ct-1.txt", ciphertextPartial1, SerType::BINARY)) {
                 std::cerr << "Error writing serialization of partial ct1 to partial-ct-1.txt" << std::endl;
             }
         }
@@ -586,6 +588,37 @@ std::vector<FHEClient> init_clients(int num_of_clients) {
     return v;
 }
 
+void decrypt_process(std::vector<FHEClient> &clients) {
+
+    for(auto& it : clients) {
+        it.receive_ct_result();
+    }
+
+    for(auto& elem_i : clients) {
+        if(&elem_i == &clients.back()) {
+            elem_i.send_lead_ct();
+        }else {
+            elem_i.send_partial_decrypted_ct();
+        }
+
+        for(auto& elem_j : clients) {
+            if(&elem_i == &elem_j) {
+                continue;
+            }else {
+                if(&elem_i == &clients.back()) {
+                    elem_j.receive_lead_ct();
+                }else {
+                    elem_j.receive_partial_ct();
+                }
+            }
+        }
+    }
+
+    for(auto& it : clients) {
+        it.decrypt_result();
+    }
+}
+
 //Server
 void scenario(int num_clients) {
     Aggregator a;
@@ -593,55 +626,59 @@ void scenario(int num_clients) {
     a.send_ccontext();
 
     CryptoContext<DCRTPoly> cc;
-    std::vector<FHEClient> clients = init_clients(2);
-    FHEClient s = clients[2];
-    FHEClient c = clients[0];
-    FHEClient c1 = clients[1];
-    cc = s.clientCC;
+    std::vector<FHEClient> clients = init_clients(3);
+    // FHEClient s = clients[2];
+    // FHEClient c = clients[0];
+    // FHEClient c1 = clients[1];
+    // cc = s.clientCC;
 
 
     // Encryption process
     a.receive_cc();
 
-    //Client
-    send_encrypted_data_process(c);
+    for(auto& it : clients) {
+        send_encrypted_data_process(it);
+        a.ciphertexts.push_back(a.receive_ct1());
+    }
 
-    //Server
-    a.ciphertexts.push_back(a.receive_ct1());
+    // //Client
+    // send_encrypted_data_process(c);
 
-    //Client 1
-    send_encrypted_data_process(c1);
+    // //Server
+    // a.ciphertexts.push_back(a.receive_ct1());
 
-    //Server
-    a.ciphertexts.push_back(a.receive_ct1());
+    // //Client 1
+    // send_encrypted_data_process(c1);
+
+    // //Server
+    // a.ciphertexts.push_back(a.receive_ct1());
 
     a.perform_calculations(); // kanei lathos epeidh kanei add to prwto ciphertext 2 fores
+
+    decrypt_process(clients);
+    // //Lead Client 
+    // s.receive_ct_result();
+    // s.send_lead_ct();
+
+    // //Client
+    // c.receive_ct_result();
     
-    s.receive_ct_result();
-    auto ciphertextPartial1 = s.clientCC->MultipartyDecryptLead({s.result}, s.secretKey);
-
-    s.send_lead_ct(ciphertextPartial1);
-
-    //Client
-    c.receive_ct_result();
-    c.receive_lead_ct();
-    
-    //CLient 1
-    c1.receive_ct_result();
-    c1.receive_lead_ct();
-
-    // for client in clients.. send partial dec
-    c1.send_partial_decrypted_ct();
+    // //CLient 1
+    // c1.receive_ct_result();
+    // c1.receive_lead_ct();
+    // // for client in clients.. send partial dec
+    // c1.send_partial_decrypted_ct();
 
     
-    //Client
-    c.receive_partial_ct();
-    c.send_partial_decrypted_ct(); //all partials are now inside c so we can decrypt
-    c.decrypt_result();
+    // //Client
+    // c.receive_partial_ct();
+    // c.receive_lead_ct();
+    // c.send_partial_decrypted_ct(); //all partials are now inside c so we can decrypt
+    // c.decrypt_result();
 
 
-    //Client1
-    c1.receive_partial_ct();
-    c1.decrypt_result();
+    // //Client1
+    // c1.receive_partial_ct();
+    // c1.decrypt_result();
 
 }
