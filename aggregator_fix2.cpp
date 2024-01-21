@@ -4,15 +4,25 @@
 #include "key/key-ser.h"
 #include "ciphertext-ser.h"
 #include <vector>
+#include <iostream>
+#include <iomanip>
+#include <chrono>
+#include <thread>
+#include <unordered_map>
+
 
 using namespace lbcrypto;
 
-usint active_clients = 0;
+int active_clients = 0;
 
 const std::string DATAFOLDER = "demoData";
 
 void scenario(int num_clients);
+void simple_scenario(int num_clients);
 void update_clients();
+
+
+std::vector<std::vector<double>> generated_data;
 
 //Mock Weights for client 1
 std::vector<double> read_data_1(void) {
@@ -38,6 +48,8 @@ std::vector<double> generate_data(void) {
     for(int i = 0; i < 12; i++) {
         data_vector.push_back( ((double)(rand() % 100)) / 100.0);
     }
+
+    generated_data.push_back(data_vector);
     return data_vector;
 }
 
@@ -45,6 +57,8 @@ class Aggregator {
     public:
         CryptoContext<DCRTPoly> m_serverCC;
         double numClient = 0;
+        std::vector<int> received_id;
+        std::unordered_map<int, int> client_message_count;
         std::vector<EvalKey<DCRTPoly>> keyswitch_keys;
         std::vector<EvalKey<DCRTPoly>> mult_keys;
         std::vector<Ciphertext<DCRTPoly>> ciphertexts;
@@ -150,6 +164,17 @@ class Aggregator {
             if (Serial::DeserializeFromFile(DATAFOLDER + "/ciphertext1.txt", ct1, SerType::BINARY) == false) {
                 std::cerr << "Could not read the ciphertext" << std::endl;
             }
+
+            std::string id;
+
+            std::ifstream MyReadFile("cid.txt");
+
+            while (getline (MyReadFile, id)) {
+              std::cout << id;
+            }
+
+            MyReadFile.close();
+            received_id.push_back(std::stoi(id));
             return ct1;
         }
 
@@ -187,6 +212,53 @@ class Aggregator {
             return server_vector;
         }
 
+        void  calculate_client_weights(int vectorsize) {
+            for(auto& element : received_id) {
+                client_message_count[element]++;
+            }
+
+            for (const auto& pair : client_message_count) {
+                std::cout << "Key: " << pair.first << ", Value: " << pair.second << std::endl;
+            }
+        }
+
+        std::vector<double> make_improved_vector(int vectorsize, int client) {
+            std::vector<double> server_vector;
+            for (int i = 1; i <= vectorsize; i++) {
+                server_vector.push_back((1.0 * client_message_count[client])/numClient);
+            }
+            return server_vector;
+        }
+
+        void improved_perform_calculations() {
+            numClient = received_id.size();
+            int i = 0;
+
+            calculate_client_weights(12);
+
+            Ciphertext<DCRTPoly> Waggr;// = ciphertextMult;
+            
+
+            for(auto& it : ciphertexts) {
+                std::vector<double> vectorOfClients = make_improved_vector(12, received_id[i]);
+
+                std::cout << vectorOfClients << std::endl;
+                Plaintext plaintext_clients = m_serverCC->MakeCKKSPackedPlaintext(vectorOfClients);
+                            
+                auto ciphertextMultTemp = m_serverCC->EvalMult(it, plaintext_clients);
+                auto ciphertextMult     = m_serverCC->ModReduce(ciphertextMultTemp);
+
+                if(i == 0 ) {
+                    Waggr = ciphertextMult;
+                }else {
+                    Waggr  = m_serverCC->EvalAdd(Waggr, ciphertextMult);
+                }
+                i++;
+            }
+
+            send_result_ct(Waggr);
+        }
+
         void perform_calculations() {
             numClient = 3.0;//(double) ciphertexts.size();
             std::vector<double> vectorOfClients = make_vector(12);
@@ -202,11 +274,13 @@ class Aggregator {
 
             send_result_ct(ciphertextMult);
         }
+
 };
 
 class FHEClient {
     public:
 
+        usint id;
         CryptoContext<DCRTPoly> clientCC;
 
         //Client-generated keys
@@ -387,6 +461,10 @@ class FHEClient {
             if (!Serial::SerializeToFile(DATAFOLDER + "/" + "ciphertext1.txt", ciphertext, SerType::BINARY)) {
                 std::cerr << "Error writing serialization of ciphertext 1 to ciphertext1.txt" << std::endl;
             }
+
+            std::ofstream client_id("cid.txt");
+            client_id << std::to_string(id);
+            client_id.close();
         }
 
         void receive_partial_ct() {
@@ -496,17 +574,31 @@ class FHEClient {
         }
 };
 
+using namespace std;
+using namespace std::chrono;
+
 int main(int argc, char* argv[]) {
 
     std::cout << "\n=================RUNNING FOR CKKS=====================" << std::endl;
 
-    scenario(3);
+    auto start = high_resolution_clock::now();
+    scenario(12);
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(stop - start);
+    cout << "Time taken with encryption: " << duration.count() << " microseconds" << endl;
+    start = high_resolution_clock::now();
+    simple_scenario(12);
+    stop = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(stop - start);
+    cout << "Time taken without encryption: " << duration.count() << " microseconds" << endl;
 
     return 0;
 }
 
 FHEClient new_client() {
     FHEClient c;
+    active_clients += 1;
+    c.id = active_clients;
     c.receive_cc();
     c.receive_server_publickey();
 
@@ -527,7 +619,8 @@ FHEClient new_client() {
 
 FHEClient new_lead_client() {
     FHEClient s; //Lead client
-
+    active_clients += 1;
+    s.id = active_clients;
     // Server //
     s.receive_cc();
 
@@ -550,7 +643,7 @@ FHEClient new_lead_client() {
 }
 
 void send_encrypted_data_process(FHEClient &c) {
-    c.data = generate_data();;
+    c.data = generate_data();
     c.receive_server_publickey();
     c.send_encrypted_data();
 }
@@ -573,13 +666,13 @@ std::vector<FHEClient> init_clients(int num_of_clients) {
 
     FHEClient s = new_lead_client();
     std::vector<FHEClient> v;
-    for ( int i = 0; i < num_of_clients; i++) {
+    for ( int i = 0; i < num_of_clients-1; i++) {
         v.push_back(new_client());
     }
     
     lead_client_add_multiplication_key(s);
 
-    for ( int i = 0; i < num_of_clients; i++) {
+    for ( int i = 0; i < num_of_clients-1; i++) {
         client_add_multiplication_key(v[i]);
     }
 
@@ -626,12 +719,7 @@ void scenario(int num_clients) {
     a.send_ccontext();
 
     CryptoContext<DCRTPoly> cc;
-    std::vector<FHEClient> clients = init_clients(3);
-    // FHEClient s = clients[2];
-    // FHEClient c = clients[0];
-    // FHEClient c1 = clients[1];
-    // cc = s.clientCC;
-
+    std::vector<FHEClient> clients = init_clients(num_clients);
 
     // Encryption process
     a.receive_cc();
@@ -641,44 +729,92 @@ void scenario(int num_clients) {
         a.ciphertexts.push_back(a.receive_ct1());
     }
 
-    // //Client
-    // send_encrypted_data_process(c);
-
-    // //Server
-    // a.ciphertexts.push_back(a.receive_ct1());
-
-    // //Client 1
-    // send_encrypted_data_process(c1);
-
-    // //Server
-    // a.ciphertexts.push_back(a.receive_ct1());
-
-    a.perform_calculations(); // kanei lathos epeidh kanei add to prwto ciphertext 2 fores
+    a.improved_perform_calculations(); // kanei lathos epeidh kanei add to prwto ciphertext 2 fores
 
     decrypt_process(clients);
-    // //Lead Client 
-    // s.receive_ct_result();
-    // s.send_lead_ct();
 
-    // //Client
-    // c.receive_ct_result();
+}
+
+void simple_scenario(int num_clients) {
+    std::vector<int> clients_id;
+    std::vector<int> received_id;
+    std::vector<std::vector<double>> values;
+    for(int i = 0;i < num_clients;i++) {
+        clients_id.push_back(i+1);
+
+        std::ofstream outputFile("ssvalue.txt");
+        if (outputFile.is_open()) {
+            for (const double& value : generated_data[i]) {
+                outputFile << value << " ";
+            }
+            // Close the file
+            outputFile.close();
+        } else {
+            std::cerr << "Error opening the output file.\n";
+        }
+
+
+        std::vector<double> tmp;
+        std::ifstream inputFile("ssvalue.txt");
+        if (inputFile.is_open()) {
+            double num;
+        
+            while (inputFile >> num) {
+                tmp.push_back(num);
+            }
+            inputFile.close();
+            values.push_back(tmp);
+        } else {
+            std::cerr << "Error opening the input file.\n";
+        }
+
+    }
+
+    std::ofstream outputFile("sscid.txt");
+    if (outputFile.is_open()) {
+        for (const int& value : clients_id) {
+            outputFile << value << " ";
+        }
+        // Close the file
+        outputFile.close();
+    } else {
+        std::cerr << "Error opening the output file.\n";
+    }
+
+    std::ifstream inputFile("sscid.txt");
+    if (inputFile.is_open()) {
+        int num;
     
-    // //CLient 1
-    // c1.receive_ct_result();
-    // c1.receive_lead_ct();
-    // // for client in clients.. send partial dec
-    // c1.send_partial_decrypted_ct();
+        while (inputFile >> num) {
+            received_id.push_back(num);
+        }
+        inputFile.close();
+    } else {
+        std::cerr << "Error opening the input file.\n";
+    }
 
-    
-    // //Client
-    // c.receive_partial_ct();
-    // c.receive_lead_ct();
-    // c.send_partial_decrypted_ct(); //all partials are now inside c so we can decrypt
-    // c.decrypt_result();
+    std::unordered_map<int, int> client_message_count;
+    for(auto& element : received_id) {
+        client_message_count[element]++;
+    }
 
+    std::vector<double> result = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    std::vector<double> final_result = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int tmp_id = clients_id[0];
+    int k = 0;
+    for(auto& element : values) {
+        cout << element;
+        for(std::vector<double>::size_type i = 0;i<element.size();i++) {
+            result[i] = element[i] * (1.0 * client_message_count[tmp_id] / 4);
+            final_result[i]+= result[i];
+        }
+        k++;
+        tmp_id=clients_id[k];
+    }
 
-    // //Client1
-    // c1.receive_partial_ct();
-    // c1.decrypt_result();
-
+    cout << "Simple Scenario: ";
+    for (const auto& value : final_result) {
+        cout << value << " ";
+    }
+    cout << endl;
 }
